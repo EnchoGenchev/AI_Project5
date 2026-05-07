@@ -49,8 +49,23 @@ class RegressionModel(object):
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
     def __init__(self):
+
         # Initialize your model parameters here
+
         "*** YOUR CODE HERE ***"
+        #from instructions
+        self.batch_size = 200
+        self.learning_rate = 0.05
+        self.hidden_size = 512
+        
+        #layer one expands to 512 neurons
+        self.w1 = nn.Parameter(1, self.hidden_size)
+        self.b1 = nn.Parameter(1, self.hidden_size)
+        
+        #layer two goes from 512 neurons to 1 predicted output
+        self.w2 = nn.Parameter(self.hidden_size, 1)
+        self.b2 = nn.Parameter(1, 1)
+        "*** END YOUR CODE ***"
 
     def run(self, x):
         """
@@ -61,7 +76,21 @@ class RegressionModel(object):
         Returns:
             A node with shape (batch_size x 1) containing predicted y-values
         """
+
         "*** YOUR CODE HERE ***"
+        #does the x * w + b to fit line to data
+        xw1 = nn.Linear(x, self.w1)
+        layer1 = nn.AddBias(xw1, self.b1)
+
+        #used to approximate the curves
+        relu1 = nn.ReLU(layer1)
+        
+        #turns the 512 numbers into 1 prediction
+        xw2 = nn.Linear(relu1, self.w2)
+        prediction = nn.AddBias(xw2, self.b2)
+        
+        return prediction
+        "*** END YOUR CODE ***"
 
     def get_loss(self, x, y):
         """
@@ -74,12 +103,38 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SquareLoss(self.run(x), y)
+        "*** END YOUR CODE ***"
+
+    
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while True:
+            #go through whole dataset
+            for x, y in dataset.iterate_once(self.batch_size):
+                loss = self.get_loss(x, y)
+                
+                #get gradients for parameters
+                params = [self.w1, self.b1, self.w2, self.b2]
+
+                #gradients show how much each 
+                grads = nn.gradients(loss, params)
+                
+                #update parameters based on gradients
+                for i in range(len(params)):
+                    params[i].update(grads[i], -self.learning_rate) #neg to reduce error
+            
+            #calc loss over dataset to check convergence
+            total_loss = nn.as_scalar(self.get_loss(nn.Constant(dataset.x), nn.Constant(dataset.y)))
+
+            #stop when loss < .02 since that's the autograder requirement
+            if total_loss < .02:
+                break
+        "*** END YOUR CODE ***"
 
 class DigitClassificationModel(object):
     """
