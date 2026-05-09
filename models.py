@@ -153,6 +153,16 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        # Layer 1: 784 inputs -> 200 hidden units
+        self.W1 = nn.Parameter(784, 200)
+        self.B1 = nn.Parameter(1, 200)
+        # Layer 2: 200 hidden units -> 100 hidden units
+        self.W2 = nn.Parameter(200, 100)
+        self.B2 = nn.Parameter(1, 100)
+        # Layer 3: 100 hidden units -> 10 output classes (digits 0-9)
+        self.W3 = nn.Parameter(100, 10)
+        self.B3 = nn.Parameter(1, 10)
+
 
     def run(self, x):
         """
@@ -169,6 +179,12 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        # Hidden layer 1 with ReLU activation
+        L1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.W1), self.B1))
+        # Hidden layer 2 with ReLU activation
+        L2 = nn.ReLU(nn.AddBias(nn.Linear(L1, self.W2), self.B2))
+        # Output layer — no ReLU, raw logits for SoftmaxLoss
+        return nn.AddBias(nn.Linear(L2, self.W3), self.B3)
 
     def get_loss(self, x, y):
         """
@@ -184,13 +200,31 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
-
+        lr = -0.5  # negative so update subtracts gradient (gradient descent)
+        while True:
+            # Iterate over training data in batches of 100
+            for x, y in dataset.iterate_once(100):
+                loss = self.get_loss(x, y)
+                # Compute gradients of loss w.r.t. all parameters
+                grads = nn.gradients(loss, [self.W1, self.B1, self.W2, self.B2, self.W3, self.B3])
+                # Update each parameter in the direction of steepest descent
+                self.W1.update(grads[0], lr)
+                self.B1.update(grads[1], lr)
+                self.W2.update(grads[2], lr)
+                self.B2.update(grads[3], lr)
+                self.W3.update(grads[4], lr)
+                self.B3.update(grads[5], lr)
+            # Stop training once validation accuracy exceeds 97.5%
+            if dataset.get_validation_accuracy() >= 0.975:
+                break
+         
 class LanguageIDModel(object):
     """
     A model for language identification at a single-word granularity.
